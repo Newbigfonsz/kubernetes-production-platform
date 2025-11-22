@@ -1,0 +1,24 @@
+# Kubernetes
+*.kubeconfig
+kubeconfig
+.kube/
+
+# Secrets
+*secret*
+*password*
+credentials*
+
+# Temporary files
+*.tmp
+*.log
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Backup files
+*.bak
+*~
