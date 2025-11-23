@@ -1,0 +1,170 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-code
+  namespace: todoapp
+data:
+  server.js: |
+    const express = require('express');
+    const { Pool } = require('pg');
+    const app = express();
+    const PORT = 3000;
+
+    const pool = new Pool({
+      host: process.env.DB_HOST,
+      port: 5432,
+      database: 'tododb',
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+    });
+
+    app.use(express.json());
+    app.use((req, res, next) => {
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type');
+      if (req.method === 'OPTIONS') return res.sendStatus(200);
+      next();
+    });
+
+    app.get('/health', (req, res) => res.json({ status: 'healthy' }));
+
+    app.get('/api/todos', async (req, res) => {
+      try {
+        const result = await pool.query('SELECT * FROM todos ORDER BY created_at DESC');
+        res.json(result.rows);
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Error' });
+      }
+    });
+
+    app.post('/api/todos', async (req, res) => {
+      const { title, description } = req.body;
+      if (!title) return res.status(400).json({ error: 'Title required' });
+      try {
+        const result = await pool.query(
+          'INSERT INTO todos (title, description) VALUES ($1, $2) RETURNING *',
+          [title, description || '']
+        );
+        res.status(201).json(result.rows[0]);
+      } catch (err) {
+        res.status(500).json({ error: 'Error' });
+      }
+    });
+
+    app.put('/api/todos/:id', async (req, res) => {
+      const { title, description, completed } = req.body;
+      try {
+        const result = await pool.query(
+          'UPDATE todos SET title = COALESCE($1, title), description = COALESCE($2, description), completed = COALESCE($3, completed) WHERE id = $4 RETURNING *',
+          [title, description, completed, req.params.id]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+        res.json(result.rows[0]);
+      } catch (err) {
+        res.status(500).json({ error: 'Error' });
+      }
+    });
+
+    app.delete('/api/todos/:id', async (req, res) => {
+      try {
+        const result = await pool.query('DELETE FROM todos WHERE id = $1', [req.params.id]);
+        if (result.rowCount === 0) return res.status(404).json({ error: 'Not found' });
+        res.json({ message: 'Deleted' });
+      } catch (err) {
+        res.status(500).json({ error: 'Error' });
+      }
+    });
+
+    app.listen(PORT, '0.0.0.0', () => console.log(`Server on port ${PORT}`));
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todoapp-backend
+  namespace: todoapp
+  labels:
+    app: todoapp
+    component: backend
+    env: production
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: todoapp
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: todoapp
+        component: backend
+        env: production
+    spec:
+      containers:
+      - name: backend
+        image: node:18-alpine
+        command:
+        - sh
+        - -c
+        - |
+          cd /tmp
+          cp /config/server.js .
+          npm install express@4.18.2 pg@8.11.3
+          node server.js
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: DB_HOST
+          value: "todoapp-db-rw.todoapp.svc.cluster.local"
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: todoapp-db-credentials
+              key: username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: todoapp-db-credentials
+              key: password
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 45
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 35
+          periodSeconds: 5
+      volumes:
+      - name: config
+        configMap:
+          name: backend-code
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: todoapp-backend
+  namespace: todoapp
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3000
+    targetPort: 3000
+  selector:
+    app: todoapp
+    component: backend
