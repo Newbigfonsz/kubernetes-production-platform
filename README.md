@@ -55,7 +55,7 @@ A complete CRUD application demonstrating end-to-end deployment:
 - **Backend**: Node.js/Express REST API  
 - **Database**: PostgreSQL (3-node HA cluster)
 
-[![Todo App Screenshot](https://github.com/Newbigfonsz/kubernetes-production-platform/blob/b6171d3136546cbecac47adb4d42ce93a97f1eae/Todoapplication.png)
+[!Todo App Screenshot](https://github.com/Newbigfonsz/kubernetes-production-platform/blob/b6171d3136546cbecac47adb4d42ce93a97f1eae/Todoapplication.png)
 
 ### Platform Components
 
