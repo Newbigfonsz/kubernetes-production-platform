@@ -1,0 +1,48 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: todoapp-db
+  namespace: todoapp
+  labels:
+    app: todoapp
+    env: production
+spec:
+  instances: 3
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.1
+  
+  postgresql:
+    parameters:
+      max_connections: "100"
+      shared_buffers: "256MB"
+  
+  bootstrap:
+    initdb:
+      database: tododb
+      owner: todouser
+      secret:
+        name: todoapp-db-credentials
+  
+  storage:
+    size: 5Gi
+    storageClass: local-path
+  
+  monitoring:
+    enablePodMonitor: true
+  
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: todoapp-db-credentials
+  namespace: todoapp
+type: kubernetes.io/basic-auth
+stringData:
+  username: todouser
+  password: todopass123
