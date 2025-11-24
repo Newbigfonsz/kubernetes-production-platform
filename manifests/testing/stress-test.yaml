@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: stress-test
+  namespace: todoapp
+spec:
+  containers:
+  - name: stress
+    image: busybox
+    command: 
+    - /bin/sh
+    - -c
+    - |
+      echo "Starting stress test..."
+      while true; do
+        for i in $(seq 1 100); do
+          wget -q -O- http://todoapp-backend:3000/api/todos > /dev/null 2>&1 &
+        done
+        sleep 1
+      done
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+  restartPolicy: Never
