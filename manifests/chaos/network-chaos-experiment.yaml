@@ -1,0 +1,18 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-delay
+  namespace: chaos-mesh
+spec:
+  action: delay
+  mode: one
+  selector:
+    namespaces:
+      - todoapp
+  delay:
+    latency: '100ms'
+    correlation: '100'
+    jitter: '0ms'
+  duration: '1m'
+  scheduler:
+    cron: '@every 5m'
