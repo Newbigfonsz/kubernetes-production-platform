@@ -12,6 +12,6 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Lint Markdown
-      uses: actionshub/markdownlint@main
+      uses: actionshub/markdownlint@6c82ff529253530dfbf75c37570876c52692835f # v3.1.4 (was @main)
     - name: Check Links
-      uses: gaurav-nelson/github-action-markdown-link-check@v1
+      uses: gaurav-nelson/github-action-markdown-link-check@5c5dfc0ac2e225883c0e5f03a85311ec2830d368 # v1 (upstream repo archived)
